@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 	
 	if ( k ) {							
 		if ( k == 1 )
-			cerr << "Something bad happened --- Debugger did not run\n";
+			cerr << "\e[1mSomething bad happened --- Debugger did not run\e[0m\n";
 		return 0;		// return early if not forced or if something bad happened
 	}
 

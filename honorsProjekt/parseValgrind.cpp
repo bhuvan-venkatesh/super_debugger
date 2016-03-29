@@ -326,6 +326,15 @@ int execValgrind(int argc, char* argv[]) {
 
     close(readMe[0]);	
 
+		string temp;
+		for (int i = 0; i < 10; ++i) 
+			temp += str[i];
+			
+		if (!temp.find("valgrind: ")) {
+			cout << "\n\t\e[1m" << str << "\e[0m\n";
+			return 1;
+		}
+
     // now parse the text file
     parse(str);
 

@@ -16,30 +16,34 @@ tryingPtrace: tryingPtrace.cpp
 	g++ -std=c++0x -w tryingPtrace.cpp -o tryingPtrace
 
 # testers
-collatzTest: collatzTest.cpp
-	g++ -std=c++0x -g -w collatzTest.cpp -o collatzTest
+collatzTest: testers/collatzTest.cpp
+	g++ -std=c++0x -g -w testers/collatzTest.cpp -o collatzTest
 	
-collatzTest_asm: collatzTest.cpp
-	g++ -S -std=c++0x collatzTest.cpp -o collatzTest.s
+collatzTest_asm: testers/collatzTest.cpp
+	g++ -S -std=c++0x testers/collatzTest.cpp -o collatzTest.s
 	
-faultyMalloc: faultyMalloc.c 
-	gcc -std=c99 -g -w faultyMalloc.c  -o faultyMalloc
+faultyMalloc: testers/faultyMalloc.c 
+	gcc -std=c99 -g -w testers/faultyMalloc.c  -o faultyMalloc
 	
-faultyMalloc_asm:	faultyMalloc.c 
-	gcc -S -w -std=c99 faultyMalloc.c -o faultyMalloc.s
+faultyMalloc_asm:	testers/faultyMalloc.c 
+	gcc -S -w -std=c99 testers/faultyMalloc.c -o faultyMalloc.s
 	
-test: test.c 
-	gcc -std=c99 -g -w test.c -o test
+test: testers/test.c 
+	gcc -std=c99 -g -w testers/test.c -o test
 	
-test_asm: test.c
-	gcc -S -w -std=c99 test.c -o test.s
+test_asm: testers/test.c
+	gcc -S -w -std=c99 testers/test.c -o test.s
 	
-testCamel: testCamel.c 
-	gcc -std=c99 -g -w testCamel.c -o testCamel 
+testCamel: testers/testCamel.c 
+	gcc -std=c99 -g -w testers/testCamel.c -o testCamel 
 	
-testCamel_asm: testCamel.c 
-	gcc -S -w -std=c99 testCamel.c -o testCamel.s
+testCamel_asm: testers/testCamel.c 
+	gcc -S -w -std=c99 testers/testCamel.c -o testCamel.s
 	
 # remove everything	
 clean:
-	rm -f super_debugger tryingPtrace collatzTest faultyMalloc test testCamel collatzTest.s  faultyMalloc.s test.s testCamel.s helloworld
+	rm -f super_debugger tryingPtrace collatzTest faultyMalloc test testCamel helloworld
+
+# remove all the assembly
+clean_asm:	
+	collatzTest.s faultyMalloc.s test.s testCamel.s
