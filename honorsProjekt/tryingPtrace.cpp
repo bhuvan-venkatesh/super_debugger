@@ -110,17 +110,16 @@ void reverse_word( pid_t pid, void* addr, int len ) {
 
 
 // create breakpoint
-pair< long, void* > set_brkpt( pid_t pid, void* addr ) {							// need address too
+pair< long, void* > set_brkpt( pid_t pid, void* addr ) {							
 	// save intruction pointer
 	void* temp = get_instr_ptr( pid );
-	
+	//void* temp = addr;
 	//cout << temp << "\n";
 	
 	// inject INT 3 = 0xCC --- this is an interrupt, sends signal to debugger
 	long new_data = get_data( pid, temp );
 	long former_data = new_data;
-	new_data <<= (new_data >> 8);
-	new_data |= 0xCC;
+	new_data = (new_data & 0xFFFFFF00) | 0xCC;
 	set_data( pid, temp, ( void* )new_data );
 	
 	// need to store the former instruction pointer so we return it
@@ -152,6 +151,51 @@ int main( int argc, char* argv[] ) {
 		int brkpt = 0;
 		pair< long, void* > brkpt_info;
 		
+		/*
+		void* addr = ( void* )0x00000000004006c4;				// fix to be main
+		
+		waitpid( parent, &status, 0 );
+		orig_rax = ptrace( PTRACE_PEEKUSER, parent, 8 * ORIG_RAX, NULL );
+		
+		if ( WIFSTOPPED( status ) ) {
+			if ( WSTOPSIG( status ) == SIGTRAP ) {				// before execve
+				cout << "Child stopped on SIGTRAP - continuing...\n";
+				cout << "The child made a system call " << orig_rax << "\n";
+				brkpt_info = set_brkpt( parent, addr );
+				brkpt = 1;
+				ptrace( PTRACE_SYSCALL, parent, NULL, NULL );
+			}
+		}
+		
+		//cout << get_instr_ptr( parent ) << "\n";
+		
+		waitpid( parent, &status, 0 );
+		cout << ptrace( PTRACE_PEEKUSER, parent, 8 * ORIG_RAX, NULL ) << "\n";
+		
+		if ( WIFSTOPPED( status ) ) {
+			cout << get_instr_ptr( parent ) << "\n";
+			set_data( parent, brkpt_info.second, ( void* )brkpt_info.first );
+			handle_brkpt( parent, brkpt_info.second );	
+			brkpt = 0;
+			ptrace( PTRACE_SYSCALL, parent, NULL, NULL );
+		}
+		
+		do {
+			waitpid( parent, &status, 0 );
+			orig_rax = ptrace( PTRACE_PEEKUSER, parent, 8 * ORIG_RAX, NULL );
+
+			cout << get_instr_ptr( parent ) << "\n";
+
+			//cout << orig_rax << "\n";
+
+			if ( WIFSTOPPED( status ) ) {	
+				usleep(10000);	
+		  	ptrace( PTRACE_SYSCALL, parent, NULL, NULL );
+		  }  
+		}
+		while ( !WIFEXITED( status ) );
+		*/
+		
 		do {
 			waitpid( parent, &status, 0 );
 			orig_rax = ptrace( PTRACE_PEEKUSER, parent, 8 * ORIG_RAX, NULL );
@@ -165,6 +209,8 @@ int main( int argc, char* argv[] ) {
 			
 				if ( brkpt && !insyscall ) {
 					cout << "In breakpoint: " << get_instr_ptr( parent ) << "\n";
+					
+					// restore data to get rid of INT 3
 					set_data( parent, brkpt_info.second, ( void* )brkpt_info.first );
 					
 					// do not need currently since the instruction pointer goes back
@@ -185,6 +231,7 @@ int main( int argc, char* argv[] ) {
 		    	}
 		    	else {
 		    		insyscall = 0;
+		    		//cout << "escaped\n";
 		    	}
 		  	}
 		  	
