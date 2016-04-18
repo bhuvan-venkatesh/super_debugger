@@ -10,7 +10,7 @@ helloworld: helloworld.cpp
 	g++ -std=c++0x -g -w helloworld.cpp -o helloworld
 
 super_debugger: super_debugger.cpp parseValgrind.cpp parseObjDump.cpp tryingPtrace.cpp
-	g++ -std=c++0x -g -w super_debugger.cpp -o super_debugger 
+	g++ -std=c++0x -g super_debugger.cpp -o super_debugger 
 	
 #tryingPtrace: tryingPtrace.cpp
 #	g++ -std=c++0x -w tryingPtrace.cpp -o tryingPtrace

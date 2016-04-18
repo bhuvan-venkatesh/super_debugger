@@ -1,0 +1,44 @@
+//#include <bits/stdc++.h>
+#include <unistd.h>
+#include <iostream>
+
+using namespace std;
+
+/*
+ * 		*** To get the disassembled code ***
+ *
+ *	
+ *
+ *	g++ -S -fverbose-asm -masm=intel helloworld.cpp
+ *			can add -fverbose-asm to make look better?
+ *
+ * 	objdump -S -d helloworld
+ *
+ * 
+ *	nm helloworld to get symbol table
+ *
+ */
+ 
+
+int main() {
+	//cout << "Hello world\n";
+	/*
+	int k = 4;
+	k++;
+	k*=k;
+	cout << k << "\n";
+	k++;
+	cout << k << "\n";
+	*/
+	write(1, "Hello world\n", 13);
+	write(1, "Hello\n", 7);
+	write(1, "world.\n", 8);
+	write(1, "Hello worldz\n", 14);
+	write(1, "Hi world\n", 10);
+	
+	char* string = malloc(5);
+	
+	strcpy(string, "hello");			// should be error here
+	
+	return 0;
+}

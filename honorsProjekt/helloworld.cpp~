@@ -50,22 +50,20 @@ int main() {
 	cerr << "Will this appear????\n";
 	*/
 	
-	cout << "This should appear after\n";
-	cout << "the first breakpoint\n";
+	cout << "\e[1mThis should appear after\e[0m\n";
+	cout << "\e[1mthe first breakpoint\e[0m\n";
 	
 	
-	cout << "Testing breakpoint in a for loop (sum from 1 to 10)\n";
+	cout << "\e[1mTesting breakpoint in a for loop (sum from 1 to 10)\e[0m\n";
 	int sum = 0;
 	for (int i = 0; i < 10; ++i)
 		sum += i;
 		
-	cout << "Sum is: " << sum << "\n";
+	cout << "\e[1mSum is: " << sum << "\e[0m\n";
 	
-	cout << "Testing third 'set' breakpoint\n";
+	cout << "\e[1mTesting third 'set' breakpoint\e[0m\n";
 	
-	cout << "This should appear after third breakpoint\n";
-	
-	cerr << "Will this appear?\n";
+	cout << "\e[1mThis should appear after third breakpoint\e[0m\n";
 /*	
 	ifstream parseMe( "/home/guiping/cs241/honorsProjekt/testers/test.c" );		// got from online - cppreference
 	

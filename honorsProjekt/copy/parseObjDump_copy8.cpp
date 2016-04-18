@@ -1,35 +1,17 @@
-/**
- * 	@file: objDump
- * 	@author: Guiping Xie 
- *
- * 	@description: UIUC - CS241 (System Programming) Honors Project 
- *	@date: Spring 2016
- *
- */
-
 using namespace std;
 
-struct individ_x86 {
-	void* addr;
-	string instr_code;
-	string read_instr_code;
-};
 
 struct x86 {
   string line;
   int lineNum;
-  vector< individ_x86 > assembly;
+  void* mem_addr;
+  string instr_code;
+  string read_instr_code;
 };
-
-// mappers from line to addr and addr to line
-map< int, void* > line_to_addr;
-map< void*, int > addr_to_line;
 
 vector< string > objectDump;
 vector< string > mainFunct;							// only debugging main for now
 vector< string > sourceFile;
-
-// the file name
 string filename;
 
 // important
@@ -38,142 +20,65 @@ vector< x86 > x86_code;
 
 // Got these online - http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
 
-/**
- *	Trim from start / left (in place)
- *
- * 	@param pid: String we want to trim
- */
+// trim from start (in place)
 static inline void ltrim(string &s) {
     s.erase(s.begin(), find_if(s.begin(), s.end(), not1(ptr_fun<int, int>(isspace))));
 }
 
-
-/**
- *	Trim from end / right (in place)
- *
- * 	@param pid: String we want to trim
- */
+// trim from end (in place)
 static inline void rtrim(string &s) {
     s.erase(find_if(s.rbegin(), s.rend(), not1(ptr_fun<int, int>(isspace))).base(), s.end());
 }
 
-
-/**
- *	Trim both left and right (in place)
- *
- * 	@param pid: String we want to trim
- */
+// trim from both ends (in place)
 static inline void trim(string &s) {
     ltrim(s);
     rtrim(s);
 }
 
-
-/**
- *	Trim from start / left (copying)
- *
- * 	@param pid: String we want to trim
- * 	@return The trimmed string
- */
+// trim from start (copying)
 static inline string ltrimmed(string s) {
     ltrim(s);
     return s;
 }
 
-
-/**
- *	Trim from end / right (copying)
- *
- * 	@param pid: String we want to trim
- * 	@return The trimmed string
- */
+// trim from end (copying)
 static inline string rtrimmed(string s) {
     rtrim(s);
     return s;
 }
 
-
-/**
- *	Trim both left and right (copying)
- *
- * 	@param pid: String we want to trim
- * 	@return The trimmed string
- */
+// trim from both ends (copying)
 static inline string trimmed(string s) {
     trim(s);
     return s;
 }
 
-
 // ------ END ------
 
 
-/**
- *	Prints the parsed objdump file (assembly code)
- *
- */
 void printData() {
 	for ( int i = 0; i < x86_code.size(); ++i ) {
-		cerr << "--------------------------------------------------------------------------------\n\n";
-		cerr << "Line number in " << filename << " is: " << x86_code[i].lineNum << "\n";
-		cerr << "Line is: \"" << x86_code[i].line << "\"\n";
+		cout << "--------------------------------------------------------------------------------\n\n";
+		cout << "Line number in " << filename << " is: " << x86_code[i].lineNum << "\n";
+		cout << "Line is: \"" << x86_code[i].line << "\"\n";
 		
-		cerr << "Assembly code is:\n";
-		vector< individ_x86 > temp = x86_code[i].assembly;
+		cout << "Assembly code is:\n";
+		vector< vector<string> > temp = x86_code[i].assembly;
 		for ( int j = 0; j < temp.size(); ++j ) {
-			cerr << "  Parsed Output:\n";
-			cerr << "    Memory address is: " << temp[j].addr << "\n";
-			cerr << "    Instruction code is: " << temp[j].instr_code << "\n";
-			cerr << "    Instr in x86 readable format is: " << temp[j].read_instr_code << "\n";
+			cout << "  Parsed Output:\n";
+			cout << "    Memory address is: " << temp[j][0] << "\n";
+			cout << "    Instruction code is: " << temp[j][1] << "\n";
+			cout << "    Instr in x86 readable format is: " << temp[j][2] << "\n";
 		}
 		
-		cerr << "\n";
-	}
-}
-
- 
-/**
- *	Prints the mappers from address to lines and lines to addresses
- *
- */
-void printMaps() {
-	cerr << "Lines to memory addresses\n";
-	for ( auto it = line_to_addr.begin(); it != line_to_addr.end(); ++it ) 
-		cerr << it -> first << "\t" << it -> second << "\n";
-	cerr << "\n";
-	
-	cerr << "Memory addresses to lines\n";
-	for ( auto it = addr_to_line.begin(); it != addr_to_line.end(); ++it ) 
-		cerr << it -> first << "\t" << it -> second << "\n";
-	cerr << "\n";
-}
-
-
-/**
- *	Fill the mappers from address to lines and lines to addresses
- *
- */
-void fillMaps() {
-	for ( int i = 0; i < x86_code.size(); ++i ) {
-		x86 temp = x86_code[i];
-		individ_x86 get_addr = temp.assembly[0];
-		if ( line_to_addr.find(temp.lineNum) == line_to_addr.end() ) {
-			line_to_addr[temp.lineNum] = get_addr.addr;
-			//addr_to_line[get_addr.addr] = temp.lineNum;				// hacky
-		}
-		
-		addr_to_line[get_addr.addr] = temp.lineNum; 
+		cout << "\n";
 	}
 }
 
 
-/**
- *	Opens the object dump file and stores it in a vector
- *
- * 	@param file_name: The name of the objdump file
- * 	@return True if the objdump file cannot be opened
- */
-bool getObjDump( string file_name ) {
+
+int getObjDump( string file_name ) {
 	ifstream parseMe( file_name );				// got from online - cppreference
 	if ( parseMe.is_open() ) {
 		string line;
@@ -195,10 +100,10 @@ bool getObjDump( string file_name ) {
 	}
 	else {
 		cerr << "\n\t\e[1mObject dump file could not be opened\e[0m\n\n";
-		return true;
+		return 1;
 	}
 	
-	return false;
+	return 0;
 }
 
 
@@ -213,39 +118,25 @@ void getObjDump( string& file_contents ) {
 */
 
 
-/**
- *	Opens the source file and stores it in a vector
- *
- * 	@param file_name: The absolute path of the source file
- * 	@return True if the source file cannot be opened
- */
-bool getFileLines( string fileloc ) {
+int getFileLines( string fileloc ) {
 	ifstream source( fileloc );	
 	if ( source.is_open() ) {
 		string line;
-		sourceFile.push_back("");
 
-		while ( getline(source, line) ) {
-			trim( line );
+		while ( getline(source, line) ) 
 			sourceFile.push_back( line );
-		}
 
 		source.close();
 	}
 	else {
 		cerr << "\n\t\e[1mYour file --- " << filename << " --- could not be opened\e[0m\n\n";
-		return true;
+		return 1;
 	}
 	
-	return false;
+	return 0;
 }
 
 
-/**
- *	Parses the absolute location of the file to get the file name
- *
- * 	@param fileloc: The absolute path of the file location 
- */
 void getFileName( string fileloc ) {
 	int idx = 0;
 
@@ -260,23 +151,13 @@ void getFileName( string fileloc ) {
 }
 
 
-/**
- *	Parse the assembly code lines 
- *
- * 	@param code: The assembly code line (string) we want to parse
- * 	@return An individ_x86 object holding the parsed contents
- */
-individ_x86 parseStr( string code ) {
-	individ_x86 parsedx86;
+vector< string > parseStr( string code ) {
+	vector< string > parsedx86;
 	int k = 0;
 
 	string addr = code.substr( 0, (k = code.find(':')) );
 	trim( addr );
-	//char* mem_addr = &addr[0];
-	//cerr << addr << "\n";
-	long mem_addr = stol( addr, NULL, 16 ); 			// in hex so we get a memory address
-	//cerr << "MEM: " << mem_addr << "\n";
-	parsedx86.addr = (void*)mem_addr;
+	parsedx86.push_back( addr );
 	
 	string data;
 	int i;
@@ -291,7 +172,7 @@ individ_x86 parseStr( string code ) {
 	}
 
 	trim( data );
-	parsedx86.instr_code = data;
+	parsedx86.push_back( data );
 	
 	string instr;
 	
@@ -299,18 +180,12 @@ individ_x86 parseStr( string code ) {
 		instr += code[i];
 	
 	trim( instr );
-	parsedx86.read_instr_code = instr;
+	parsedx86.push_back( instr );
 	
 	return parsedx86;
 }
 
 
-/**
- *	Parses the whole assembly file
- *
- * 	@param indices: The indices of the assembly file (broken by line numbers)
- * 	@param linenumber: The line number of source file corresponding to the assembly code
- */
 void parseAssem( const vector< int >& indices, const vector< int >& linenumber ) {
 	int i = 0;
 	
@@ -346,13 +221,6 @@ void parseAssem( const vector< int >& indices, const vector< int >& linenumber )
 }
 
 
-/**
- *	The beginning of our program
- *
- * 	@param argc: Arguments passed straight from original main function
- * 	@param argv: Arguments passed straight from original main function
- * 	@return Used for exit status checking
- */
 int execObjDump( int argc, char* argv[] ) {			// these arguments are the exact same as argc and argv
 	int argNum = 1;
 	if ( !strcmp(argv[1], "-f") || !strcmp(argv[1], "--force") )
@@ -383,7 +251,7 @@ int execObjDump( int argc, char* argv[] ) {			// these arguments are the exact s
 			exit( 1 );
 		}
 		
-		// can also use objdump --dwarf=decodedline ./name_of_program to get everything
+		// can also use --dwarf=decodedline to get everything
 		const char* objdump_args[5];
 		objdump_args[0] = "objdump";
 		objdump_args[1]	= "-d";
@@ -473,17 +341,6 @@ int execObjDump( int argc, char* argv[] ) {			// these arguments are the exact s
 	
 	// parse the assembly x86 file
 	parseAssem( indices, linenumber );
-	
-	// ignore main
-	x86_code.erase( x86_code.begin() );
-	
-	fillMaps();
-	
-	// print the data in the maps
-	//printMaps();
-	
-	if ( remove(file_name) )
-		cerr << "\n\t\e[1mCannot remove file\e[0m\n\n";
 	
 	// print parsed data
 	//printData();

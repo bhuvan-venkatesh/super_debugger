@@ -159,10 +159,10 @@ void fillMaps() {
 		individ_x86 get_addr = temp.assembly[0];
 		if ( line_to_addr.find(temp.lineNum) == line_to_addr.end() ) {
 			line_to_addr[temp.lineNum] = get_addr.addr;
-			//addr_to_line[get_addr.addr] = temp.lineNum;				// hacky
+			addr_to_line[get_addr.addr] = temp.lineNum;				// hacky
 		}
 		
-		addr_to_line[get_addr.addr] = temp.lineNum; 
+		//addr_to_line[get_addr.addr] = temp.lineNum; 
 	}
 }
 

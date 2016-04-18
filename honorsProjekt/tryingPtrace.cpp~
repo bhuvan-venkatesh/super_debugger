@@ -660,10 +660,8 @@ bool step_handler( pid_t pid ) {
 	
 	int line_num = addr_to_line[instr_addr];	
 	
-	if ( line_num == former_line ) {				// need to go to next line that is not the current one
-		ptrace( PTRACE_SINGLESTEP, pid, NULL, NULL );
+	if ( line_num == former_line )				// need to go to next line that is not the current one
 		return true;
-	}
 		 			
 	cerr << line_num << "\t\t\t" << sourceFile[line_num] << "\n";	
 	

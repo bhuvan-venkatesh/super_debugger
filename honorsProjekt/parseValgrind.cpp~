@@ -40,10 +40,6 @@ string listOfErrors[] = {"Segfault", "Invalid Read", "Invalid Write", "Invalid F
 */
 
 
-/**
- *	Prints the memory summary report from valgrind
- *
- */
 void printMem() {
   for (int i = 0; i < memory.size(); ++i)
     cerr << memory[i] << "\n";
@@ -51,21 +47,11 @@ void printMem() {
 }
 
 
-/**
- *	Prints the tuple object passed in
- *
- * 	@param t: The tuple holding the function name, file, and line number we want to print
- */
 void printDes(tuple<string, string, int> t) { 
   cerr << "    Function: " << get<0>(t) << "    File: " << get<1>(t) << "    Line#: " << get<2>(t) << "\n"; 
 }
 
 
-/**
- *	Prints the error object passed in
- *
- * 	@param t: The errors object we want to print 
- */
 void printErrors(errors t) {
   cerr << t.errorMessage << "\n";
   for (auto it = (t.description).begin(); it != (t.description).end(); ++it)
@@ -74,10 +60,6 @@ void printErrors(errors t) {
 }
 
 
-/**
- *	Prints all the errors by category
- *
- */
 void printCategory() {
 	cerr << "\n";
   for (int i = 0; i < 9; ++i) {
@@ -92,14 +74,6 @@ void printCategory() {
 }
 
 
-/**
- *	Split the string passed in by delimiter (got online)
- *
- * 	@param str: Arguments passed straight from original main function
- * 	@param delim: What we want to split the string by
- * 	@param numtokens: The length of the array we return (pass this in by reference)
- * 	@return The parsed string as an array of strings
- */
 char **strsplit(char *str, const char *delim, size_t *numtokens) {
   size_t tokens_alloc = 1;
   size_t tokens_used = 0;
@@ -132,11 +106,6 @@ char **strsplit(char *str, const char *delim, size_t *numtokens) {
 }
 
 
-/**
- *	Split the string passed in by delimiter (an alternative method to above)
- *
- * 	@param str: The entire valgrind file piped to a string
- */
 vector< string > parseNewLine( char* str ) {
 	vector< string > ret;
 
@@ -164,11 +133,6 @@ vector<string>& split(string &str, char delim) {
 */
 
 
-/**
- *	Parse the valgrind output
- *
- * 	@param str: The entire valgrind file piped to a string
- */
 void parse(char* str) {
   vector<string> errorLines;
   string empty = "";
@@ -278,10 +242,6 @@ void parse(char* str) {
 }
 
 
-/**
- *	Fills the errors array
- *
- */
 void examine() {
   for (int i = 0; i < totalErrors.size(); ++i) {
     if (totalErrors[i].errorMessage.find("(SIGSEGV)") != -1)
@@ -309,10 +269,6 @@ void examine() {
 }
 
 
-/**
- *	Prints out all the errors that can be handled right away
- *
- */
 void handleNows() {
   cerr << "\n----------------------------------------------------------------------------------"
   "\n----------------------------------------------------------------------------------\n\n";
@@ -385,13 +341,6 @@ void handleNows() {
 }
 
 
-/**
- *	The beginning of our program
- *
- * 	@param argc: Arguments passed straight from original main function
- * 	@param argv: Arguments passed straight from original main function
- * 	@return Used for exit status checking
- */
 int execValgrind(int argc, char* argv[]) {
   int readMe[2];
   //int hide_output[2];

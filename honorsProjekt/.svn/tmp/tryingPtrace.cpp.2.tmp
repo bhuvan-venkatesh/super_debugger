@@ -1,0 +1,512 @@
+using namespace std;
+
+// struct for registers
+struct user_regs_struct regs;
+
+// struct to access stuff
+struct user* user_space;
+
+struct brkpt_info {
+  long former_data;
+  void* orig_addr;
+  void* brkpt_addr;				// 1 more than original
+};
+
+/*debugger commands*/
+typedef enum {CONTINUE, BREAK, KILL, NEXT, REGISTER, PRINT} cmd;
+
+
+// vector to store all info about breakpoints
+vector< brkpt_info > all_brkpts;
+
+// the number of breakpoints
+int brkpt_num;
+
+// index of breakpoint, might change
+int brkpt_idx;
+
+// Can have option to compile their file manually so they do not need to know compiler flags 
+
+// helpers to get stuff
+void* get_instr_ptr( pid_t pid ) {
+	return ( void* )ptrace( PTRACE_PEEKUSER, pid, 8 * RIP, NULL );
+}
+
+void set_instr_ptr( pid_t pid, void* addr ) {
+	ptrace( PTRACE_POKEUSER, pid, 8 * RIP, addr );
+}
+
+void* get_stack_ptr( pid_t pid ) {
+	return ( void* )ptrace( PTRACE_PEEKUSER, pid, 8 * RSP, NULL );
+}
+
+void* get_ret_addr( pid_t pid, void* stack_pointer ) {
+	return ( void* )ptrace( PTRACE_PEEKTEXT, pid, stack_pointer, NULL );
+}
+
+long get_data( pid_t pid, void* addr ) {
+	return ptrace( PTRACE_PEEKDATA, pid, addr, NULL );
+}
+
+void set_data( pid_t pid, void* addr, void* data ) {
+	ptrace( PTRACE_POKEDATA, pid, addr, data );
+}
+
+void getRegisters( pid_t pid ) {
+	ptrace( PTRACE_GETREGS, pid, NULL, &regs );
+}
+
+
+// prints the registers gdb prints
+void printRegisters( pid_t pid ) {
+	cout << "\n";
+	cout << "Register rax:\t\t" << get_data( pid, ( void* )regs.rax ) << "\n";
+	cout << "Register rbx:\t\t" << get_data( pid, ( void* )regs.rbx ) << "\n";
+	cout << "Register rcx:\t\t" << get_data( pid, ( void* )regs.rcx ) << "\n";
+	cout << "Register rdx:\t\t" << get_data( pid, ( void* )regs.rdx ) << "\n";
+	cout << "Register rsi:\t\t" << get_data( pid, ( void* )regs.rsi ) << "\n";
+	cout << "Register rdi:\t\t" << get_data( pid, ( void* )regs.rdi ) << "\n";
+	cout << "Register rbp:\t\t" << get_data( pid, ( void* )regs.rbp ) << "\n";
+	cout << "Register rsp:\t\t" << get_data( pid, ( void* )regs.rsp ) << "\n";
+	cout << "Register r8:\t\t" << get_data( pid, ( void* )regs.r8 ) << "\n";
+	cout << "Register r9:\t\t" << get_data( pid, ( void* )regs.r9 ) << "\n";
+	cout << "Register r10:\t\t" << get_data( pid, ( void* )regs.r10 ) << "\n";
+	cout << "Register r11:\t\t" << get_data( pid, ( void* )regs.r11 ) << "\n";
+	cout << "Register r12:\t\t" << get_data( pid, ( void* )regs.r12 ) << "\n";
+	cout << "Register r13:\t\t" << get_data( pid, ( void* )regs.r13 ) << "\n";
+	cout << "Register r14:\t\t" << get_data( pid, ( void* )regs.r14 ) << "\n";
+	cout << "Register r15:\t\t" << get_data( pid, ( void* )regs.r15 ) << "\n";
+	cout << "Register rip:\t\t" << get_data( pid, ( void* )regs.rip ) << "\n";
+	cout << "Register eflags:\t" << get_data( pid, ( void* )regs.eflags ) << "\n";
+	cout << "Register cs:\t\t" << get_data( pid, ( void* )regs.cs ) << "\n";
+	cout << "Register ss:\t\t" << get_data( pid, ( void* )regs.ss ) << "\n";
+	cout << "Register ds:\t\t" << get_data( pid, ( void* )regs.ds ) << "\n";
+	cout << "Register es:\t\t" << get_data( pid, ( void* )regs.es ) << "\n";
+	cout << "Register fs:\t\t" << get_data( pid, ( void* )regs.fs ) << "\n";
+	cout << "Register gs:\t\t" << get_data( pid, ( void* )regs.gs ) << "\n\n";
+}
+
+// create breakpoint
+void set_brkpt( pid_t pid, void* addr ) {			
+	// need to check if breakpoint is already set or not --- do not want duplicates
+				
+	// inject INT 3 = 0xCC --- this is an interrupt, sends signal to debugger
+	long new_data = get_data( pid, addr );
+	long former_data = new_data;
+	new_data = ( new_data & ~0xFF ) | 0xCC;
+	set_data( pid, addr, (void*)new_data );
+
+	// need to store the former instruction pointer and data
+	brkpt_info storage;
+	storage.former_data = former_data;
+	storage.orig_addr = addr;
+	storage.brkpt_addr = addr + 1;
+	all_brkpts.push_back( storage );
+}
+
+// set back instruction pointer
+void handle_brkpt( pid_t pid, void* instr_ptr, void* data ) {
+	set_data( pid, instr_ptr, data );
+	set_instr_ptr( pid, instr_ptr );
+}
+
+// check to see if the currentbrkpt_num instruction is a breakpoint
+bool is_brkpt( pid_t pid ) {
+	void* instr_addr = get_instr_ptr( pid );
+
+	for ( int i = 0; i < all_brkpts.size(); ++i ) {
+		if ( all_brkpts[i].brkpt_addr == instr_addr ) {
+			brkpt_idx = i;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+// get previous breakpoint information
+brkpt_info get_brkpt() {
+	return all_brkpts[brkpt_idx];
+}
+
+
+void printIntro() {
+	cout << "\e[1mWelcome to sdb\n";
+	cout << "Run your program with 'r' or 'run'\n";
+	cout << "Set breakpoints with 'break', 'br', or 'b' along with the line number or function\n";
+	cout << "Continue your program with 'c' or 'continue'\n";
+	cout << "Step through your program line by line with 'n', 'next', 's', or 'step'\n";
+	cout << "Stop debugging your program with 'kill', 'q', 'quit', or 'exit'\n";
+	cout << "For more advanced features type 'help' to get the complete functionality of sdb\e[0m\n\n"; 
+}
+
+void printHelp() {
+
+}
+
+string cont_cmds[] = {"c", "continue"};
+string next_cmds[] = {"n", "next", "s", "step"};
+string exit_cmds[] = {"kill", "quit", "q", "exit"};
+string break_cmds[] = {"break", "br", "b", "brk"};
+string reg_cmds[] = {"reg", "registers"};
+string help_cmds[] = {"help"};
+string run_cmds[] = {"run", "r"};
+
+/* reads command from user */
+cmd next_cmd(char **argv) {
+	cmd cmd = REGISTER;
+
+	char *cmdstr;
+	//if (!(cmdstr = readline("super_debugger -> "))) return cmd;
+
+	if (!strcmp(cmdstr, "c") || !strcmp(cmdstr, "continue")){
+		cmd = CONTINUE;
+	}else if (!strcmp(cmdstr, "kill") || !strcmp(cmdstr, "quit") || !strcmp(cmdstr, "q") || !strcmp(cmdstr, "exit")){   
+		cmd = KILL;
+	}else if (!strcmp(cmdstr, "n") || !strcmp(cmdstr, "next") || !strcmp(cmdstr, "step") || !strcmp(cmdstr, "s")){
+		cmd = NEXT;
+	}else if (!strcmp(cmdstr, "reg") || !strcmp(cmdstr, "registers")){
+		cmd = REGISTER;
+	}else{
+		const char *op = strtok(cmdstr, " ");
+		const char *arg = strtok(NULL, " ");
+		if ( op && arg && (strcmp(op, "break") == 0 || !strcmp(op, "br") || !strcmp(op, "b")))
+		{
+			cmd = BREAK;
+			*argv = strdup(arg);
+		}else if ( op && arg && (!strcmp(op, "print") || !strcmp(op, "p")))
+		{
+			cmd = PRINT;
+			*argv = strdup(arg);
+		}
+	}
+	free(cmdstr);
+	return cmd;
+}
+
+// in break function
+// check that input is now a line number
+bool is_num( string input ) {
+	// only checking line number
+	for ( int i = 1; i < input.length(); ++i ) {
+		if ( !isdigit(input[i]) ) {
+			cerr << "Break input: '" << input << "' is undefined\n";
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+// in break function
+// check that input is now a valid function   ---   not implimenting functions now (placeholder)
+bool is_valid_func( string input ) {
+	return true;
+}
+
+// check to see if the input is valid but not one of the commands to run / set breakpoints
+bool input_valid( string input ) {
+	for ( int i = 0; i < 2; ++i )
+		if ( !input.compare(cont_cmds[i]) )
+			return true;
+			
+	for ( int i = 0; i < 4; ++i )
+		if ( !input.compare(next_cmds[i]) )
+			return true;
+			
+	for ( int i = 0; i < 2; ++i )
+		if ( !input.compare(reg_cmds[i]) )
+			return true;
+			
+	return false;
+}
+
+// check to see if break command was provided 
+bool input_break( string input ) {
+	if ( !input.find("break ") || !input.find("br ") || !input.find("b ") || !input.find("brk ") ) 
+		return true;
+
+	return false;
+}
+
+// check to see if exit command was provided
+bool input_exit( string input ) {
+	for ( int i = 0; i < 4; ++i )
+		if ( !input.compare(exit_cmds[i]) )
+			return true;
+
+	return false;
+} 
+
+// confirm if the user wants to exit or not
+bool confirm_exit() {
+	string str;
+
+	while ( 1 ) {
+		cerr << "Are you sure you want to quit? ('y'/'yes' or 'n'/'no') ";
+		getline( cin, str );
+		
+		if ( !str.compare("y") || !str.compare("yes") ) {				// if yes
+			return true;
+		}
+		else if ( !str.compare("n") || !str.compare("no") ) {		// if no
+			return false;
+		}
+		else {
+			cerr << "Invalid answer: '" << str << "'\n";
+		}
+	}
+	
+	return false;
+}
+
+// find and print out 
+void* find_print_brk_loc( string str, int is_line_num ) {
+	// in case if it does not match any line number
+	// we put the brkpt at the next line greater than the lline number specified
+	// print message if that is the case
+	int closest = 0;					
+
+	if ( is_line_num ) {
+		int line_num = stoi( str );
+		for ( int i = 0; i < x86_code.size(); ++i ) {
+			x86 temp = x86_code[i];
+		
+			if ( temp.lineNum == line_num ) {
+				++brkpt_num;
+				cerr << "Breakpoint " << brkpt_num << " set at address: '" << "ph" << "', file: '" << "ph" << "', line: '" << "ph'\n";
+				return NULL;
+			}
+		}
+	}
+	else {
+		
+	}
+}
+
+/*
+void* find_addr( string str, int is_line_num ) {
+	if ( is_line_num ) {
+		// look through data and find addr corresponding to line number
+		int line_num = stoi( str );
+	}
+	
+	// is a function name or something else
+	
+	return NULL;
+}
+*/
+
+// when the program first stops to let the user input breakpoints
+void prog_init( pid_t pid ) {
+	vector< void* > initial_brkpt;
+	
+	printIntro();
+	cerr << "Program stopped\n(sdb) ";			
+	
+	// handle setting breakpoints and such here
+	string input_cmd;
+	
+	while ( getline(cin, input_cmd) ) {
+		if ( !input_cmd.compare("run") || !input_cmd.compare("r") ) {
+			break;
+		}
+		else if ( input_exit(input_cmd) ) {
+			// kill program
+			if ( confirm_exit() ) {
+				kill( pid, SIGKILL ); 
+				break;
+			}
+			else {
+				cerr << "Did not quit program\n";
+			}
+		}
+		else if ( input_break(input_cmd) ) {
+			input_cmd.erase( 0, input_cmd.find(" ") + 1 );
+			trim( input_cmd );
+			
+			cerr << input_cmd << "\n";
+			
+			if ( isdigit(input_cmd[0]) ) {
+				if ( is_num(input_cmd) ) {
+					// breakpoint print out handler
+					void* brk_addr = find_print_brk_loc( input_cmd, 1 );
+					//cerr << "Breakpoint set at line: '" << stoi( input_cmd ) << "'\n";
+					initial_brkpt.push_back( brk_addr );
+				}
+			}
+			else {
+				if ( is_valid_func(input_cmd) ) {
+					void* brk_addr = find_print_brk_loc( input_cmd, 0 );
+					initial_brkpt.push_back( brk_addr );
+					//cerr << "Breakpoint set at: '" << input_cmd << "'\n";
+				}
+			}
+		}
+		else if ( input_valid(input_cmd) ) {
+			cerr << "The program is not being run\n";
+		}
+		else {
+			cerr << "Invalid command. Make sure you do not have any leading";
+			cerr << " / trailing spaces. Look at 'help' for more information\n";
+		}
+		
+		cerr << "(sdb) ";
+	}
+
+	// insert break points here
+	for ( int i = 0; i < initial_brkpt.size(); ++i ) 
+		set_brkpt( pid, initial_brkpt[i] );
+
+	ptrace( PTRACE_CONT, pid, NULL, NULL );
+}
+
+int main_debugger( int argc, char* argv[] ) {
+	pid_t parent = fork();
+
+	if ( parent == -1 ) {
+		cerr << "Forking for main debugger failed\n";			
+		exit( 420 );
+	}
+
+	if ( parent ) {
+		int	status;
+		//int insyscall = 0;
+		long orig_rax, rax, ins;
+		int brkpt = 0;
+		int flag = 0;
+		char *arg;
+
+		// for our vector
+		int brkpt_pos = 0;
+
+		// breakpoints are set to next valid target
+		// need array of breakpoint addresses --- might not be in order
+
+		waitpid( parent, &status, 0 );
+
+		// will send SIGTRAP at first execvp	  ---		stops before the program is run
+		if ( WIFSTOPPED(status) ) {
+			if ( WSTOPSIG(status) == SIGTRAP ) 				// before execve
+				prog_init( parent );
+		}
+
+		do {
+			waitpid( parent, &status, 0 );
+
+			if ( WIFEXITED(status) || (WIFSIGNALED(status) && WTERMSIG(status) == SIGKILL) ) {
+				//cout << "Process " << parent << " terminated\n";
+				break;
+			}
+
+			if ( WIFSTOPPED(status) ) {
+				switch( next_cmd(&arg) )
+				{
+					case BREAK: /*set break point*/
+						{
+
+							break;
+						}
+
+					case PRINT:
+						{
+
+							break;
+						}
+
+					case NEXT: /*next instruction*/
+						{
+							//long rip =  ptrace(PTRACE_PEEKUSER, pid, 8 * RIP, NULL);
+
+							/*read two words at eip*/
+							//opcode[0] = ptrace(PTRACE_PEEKDATA, pid, rip, NULL);
+							//opcode[1] = ptrace(PTRACE_PEEKDATA, pid, rip+sizeof(long), NULL);
+							//old_rip = rip;
+
+							/*next instruction*/
+							ptrace( PTRACE_SINGLESTEP, parent, NULL, NULL );
+							//wait(&status);
+							break;
+						}
+
+					case REGISTER:			/* all registers */
+						{
+							getRegisters( parent );
+							printRegisters( parent );
+							break;
+						}
+					case CONTINUE:/*continue execution*/
+						/*decrement eip*/ 
+						ptrace( PTRACE_CONT, parent, NULL, NULL );
+						//wait(&status);
+						break;
+
+					case KILL: 		/* kill process */
+						{
+							if ( confirm_exit() ) 
+								kill( parent, SIGKILL );
+							else cerr << "Did not quit program\n";
+
+							break;
+						}
+					default:		/* error */
+						fprintf(stderr, "invalid or unknown command\n");
+				}
+			}
+/*
+			cout << "Child stopped on address: " << get_instr_ptr( parent ) << "\n";
+
+			if ( flag ) {
+				// might want to set all breakpoints
+				cout << "Resetting breakpoint to previous " << all_brkpts[brkpt_pos].orig_addr << " \n";
+				set_brkpt( parent, (void*)all_brkpts[brkpt_pos].orig_addr );					
+				//++brkpt;
+				flag = 0;
+				cout << "\n--------------------------------------------------\n\n";
+			}
+			else {
+				if ( is_brkpt(parent) ) {
+					cout << "\n--------------------------------------------------------------------------------\n\n";
+					cout << "In breakpoint: " << get_instr_ptr( parent ) << "\n";
+
+					// get the breakpoint info from vector
+					brkpt_info curr_brkpt = get_brkpt();
+
+					brkpt_pos = brkpt_idx;
+
+					// restore data to get rid of INT 3 and restore instr pointer
+					handle_brkpt( parent, curr_brkpt.orig_addr, (void*)curr_brkpt.former_data );	
+
+					cout << "In breakpoint after reset data: " << get_instr_ptr( parent ) << "\n";
+
+					//--brkpt;
+					flag = 1;
+
+					ptrace( PTRACE_SINGLESTEP, parent, NULL, NULL );
+				}
+			}
+
+			if ( !flag )
+				ptrace( PTRACE_CONT, parent, NULL, NULL );
+*/
+		}
+		while ( !WIFEXITED(status) );
+
+		// can have option to rerun stuff
+		cerr << "Program finished - debugger terminating...\n";
+	}
+	else {
+		if ( ptrace(PTRACE_TRACEME, 0, NULL, NULL) ) {
+			cerr << "Cannot trace child process for main debugger\n";
+			exit( 1337 );
+		}
+
+		int k = execvp( argv[1], &argv[1] );
+
+		if ( k == -1 )
+			cerr << "Execution failed for main debugger\n";
+		exit( 1337 );
+	}	
+
+	return 0;
+}

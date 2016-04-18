@@ -3,23 +3,11 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-#include <sys/types.h>
-#include <sys/syscall.h>
-#include <stdio.h>
-#include <sys/stat.h>
-
-#include <sys/ptrace.h>
-#include <sys/user.h>
-#include <sys/reg.h>
-
 #include "parseValgrind.cpp"
 #include "parseObjDump.cpp"
 #include "tryingPtrace.cpp"
 
 using namespace std;
-
-
-// Can have option to compile their file manually so they do not need to know compiler flags 
 
 /*
  *		Needs to compile with -g flag

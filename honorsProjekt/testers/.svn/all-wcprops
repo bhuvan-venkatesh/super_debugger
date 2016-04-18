@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers
+END
+testCamel_sol.c
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/testCamel_sol.c
+END
+test.c
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/test.c
+END
+test.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/test.cpp
+END
+testCamel.c
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/testCamel.c
+END
+testOnline.c
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/testOnline.c
+END
+collatzTest.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/collatzTest.cpp
+END
+faultyMalloc.c
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/faultyMalloc.c
+END
+testCamel_sol
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/sp16-cs241/!svn/ver/58035/gxie2/honorsProjekt/testers/testCamel_sol
+END
