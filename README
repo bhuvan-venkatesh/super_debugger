@@ -1,0 +1,7 @@
+Super Debugger
+-------------------------
+
+An advanced GDB debugger, track your assertions, logic, and memory to help find your memory errors quicker.
+Run it simply like you would run GDB and debug your program.
+
+Support is needed for advanced framing and argument parsing.
